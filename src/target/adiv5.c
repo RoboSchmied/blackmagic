@@ -399,7 +399,7 @@ static uint32_t cortexm_initial_halt(adiv5_access_port_s *ap)
 	platform_timeout_set(&halt_timeout, cortexm_wait_timeout);
 
 	/* Setup to read/write DHCSR */
-	/* ap_mem_access_setup() uses ADIV5_AP_CSW_ADDRINC_SINGLE which is undesirable for our use here */
+	/* adiv5_mem_access_setup() uses ADIV5_AP_CSW_ADDRINC_SINGLE which is undesirable for our use here */
 	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw | ADIV5_AP_CSW_SIZE_WORD);
 	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, CORTEXM_DHCSR);
 	/* Write (and do a dummy read of) DHCSR to ensure debug is enabled */
@@ -1144,7 +1144,7 @@ void adiv5_dp_init(adiv5_debug_port_s *const dp)
 }
 
 /* Program the CSW and TAR for sequential access at a given width */
-void ap_mem_access_setup(adiv5_access_port_s *ap, target_addr_t addr, align_e align)
+void adiv5_mem_access_setup(adiv5_access_port_s *const ap, const target_addr_t addr, const align_e align)
 {
 	uint32_t csw = ap->csw | ADIV5_AP_CSW_ADDRINC_SINGLE;
 
