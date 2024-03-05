@@ -173,7 +173,7 @@ int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t 
 		DEBUG_GDB("M packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
 		uint8_t *mem = alloca(len);
 		unhexify(mem, pbuf + hex, len);
-		if (target_mem_write(cur_target, addr, mem, len))
+		if (target_mem32_write(cur_target, addr, mem, len))
 			gdb_putpacketz("E01");
 		else
 			gdb_putpacketz("OK");
@@ -343,7 +343,7 @@ int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t 
 			break;
 		}
 		DEBUG_GDB("X packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
-		if (target_mem_write(cur_target, addr, pbuf + bin, len))
+		if (target_mem32_write(cur_target, addr, pbuf + bin, len))
 			gdb_putpacketz("E01");
 		else
 			gdb_putpacketz("OK");
