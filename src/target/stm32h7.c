@@ -280,7 +280,7 @@ bool stm32h7_probe(target_s *target)
 
 	/* RM0433 Rev 4 is not really clear, what bits are needed in DBGMCU_CR. Maybe more flags needed? */
 	const uint32_t dbgmcu_ctrl = DBGSLEEP_D1 | D1DBGCKEN;
-	target_mem_write32(target, DBGMCU_CR, dbgmcu_ctrl);
+	target_mem32_write32(target, DBGMCU_CR, dbgmcu_ctrl);
 	return true;
 }
 
@@ -302,7 +302,7 @@ static bool stm32h7_attach(target_s *target)
 static void stm32h7_detach(target_s *target)
 {
 	stm32h7_priv_s *ps = (stm32h7_priv_s *)target->target_storage;
-	target_mem_write32(target, DBGMCU_CR, ps->dbg_cr);
+	target_mem32_write32(target, DBGMCU_CR, ps->dbg_cr);
 	cortexm_detach(target);
 }
 
@@ -313,7 +313,7 @@ static bool stm32h7_flash_busy_wait(target_s *const target, const uint32_t regba
 		status = target_mem32_read32(target, regbase + FLASH_SR);
 		if ((status & FLASH_SR_ERROR_MASK) || target_check_error(target)) {
 			DEBUG_ERROR("%s: error status %08" PRIx32 "\n", __func__, status);
-			target_mem_write32(target, regbase + FLASH_CCR, status & FLASH_SR_ERROR_MASK);
+			target_mem32_write32(target, regbase + FLASH_CCR, status & FLASH_SR_ERROR_MASK);
 			return false;
 		}
 	}
@@ -336,8 +336,8 @@ static bool stm32h7_flash_unlock(target_s *const target, const uint32_t addr)
 	/* Unlock the device Flash if not already unlocked (it's an error to re-key the controller if it is) */
 	if (target_mem32_read32(target, regbase + FLASH_CR) & FLASH_CR_LOCK) {
 		/* Enable Flash controller access */
-		target_mem_write32(target, regbase + FLASH_KEYR, STM32H7_FLASH_KEY1);
-		target_mem_write32(target, regbase + FLASH_KEYR, STM32H7_FLASH_KEY2);
+		target_mem32_write32(target, regbase + FLASH_KEYR, STM32H7_FLASH_KEY1);
+		target_mem32_write32(target, regbase + FLASH_KEYR, STM32H7_FLASH_KEY2);
 	}
 	/* Return whether we were able to put the device into unlocked mode */
 	return !(target_mem32_read32(target, regbase + FLASH_CR) & FLASH_CR_LOCK);
@@ -351,7 +351,7 @@ static bool stm32h7_flash_erase(target_flash_s *const target_flash, target_addr_
 	if (!stm32h7_flash_unlock(target, addr))
 		return false;
 	/* We come out of reset with HSI 64 MHz. Adapt FLASH_ACR.*/
-	target_mem_write32(target, flash->regbase + FLASH_ACR, 0);
+	target_mem32_write32(target, flash->regbase + FLASH_ACR, 0);
 	addr &= (NUM_SECTOR_PER_BANK * FLASH_SECTOR_SIZE) - 1U;
 	const size_t end_sector = (addr + len - 1U) / FLASH_SECTOR_SIZE;
 	const align_e psize = flash->psize;
@@ -360,8 +360,8 @@ static bool stm32h7_flash_erase(target_flash_s *const target_flash, target_addr_
 	for (size_t begin_sector = addr / FLASH_SECTOR_SIZE; begin_sector <= end_sector; ++begin_sector) {
 		/* Erase the current Flash sector */
 		const uint32_t ctrl = (psize * FLASH_CR_PSIZE16) | FLASH_CR_SER | (begin_sector * FLASH_CR_SNB_1);
-		target_mem_write32(target, reg_base + FLASH_CR, ctrl);
-		target_mem_write32(target, reg_base + FLASH_CR, ctrl | FLASH_CR_START);
+		target_mem32_write32(target, reg_base + FLASH_CR, ctrl);
+		target_mem32_write32(target, reg_base + FLASH_CR, ctrl | FLASH_CR_START);
 
 		/* Wait for the operation to complete and report errors */
 		DEBUG_INFO("Erasing, ctrl = %08" PRIx32 " status = %08" PRIx32 "\n",
@@ -384,8 +384,8 @@ static bool stm32h7_flash_write(
 
 	/* Prepare the Flash write operation */
 	const uint32_t ctrl = flash->psize * FLASH_CR_PSIZE16;
-	target_mem_write32(target, flash->regbase + FLASH_CR, ctrl);
-	target_mem_write32(target, flash->regbase + FLASH_CR, ctrl | FLASH_CR_PG);
+	target_mem32_write32(target, flash->regbase + FLASH_CR, ctrl);
+	target_mem32_write32(target, flash->regbase + FLASH_CR, ctrl | FLASH_CR_PG);
 	/* does H7 stall?*/
 
 	/* Write the data to the Flash */
@@ -396,7 +396,7 @@ static bool stm32h7_flash_write(
 		return false;
 
 	/* Close write windows */
-	target_mem_write32(target, flash->regbase + FLASH_CR, 0);
+	target_mem32_write32(target, flash->regbase + FLASH_CR, 0);
 	return true;
 }
 
@@ -409,7 +409,7 @@ static bool stm32h7_erase_bank(
 	}
 	/* BER and start can be merged (§3.3.10). */
 	const uint32_t ctrl = (psize * FLASH_CR_PSIZE16) | FLASH_CR_BER | FLASH_CR_START;
-	target_mem_write32(target, reg_base + FLASH_CR, ctrl);
+	target_mem32_write32(target, reg_base + FLASH_CR, ctrl);
 	DEBUG_INFO("Mass erase of bank started\n");
 	return true;
 }
@@ -497,10 +497,10 @@ static bool stm32h7_crc_bank(target_s *target, uint32_t addr)
 	if (!stm32h7_flash_unlock(target, addr))
 		return false;
 
-	target_mem_write32(target, reg_base + FLASH_CR, FLASH_CR_CRC_EN);
+	target_mem32_write32(target, reg_base + FLASH_CR, FLASH_CR_CRC_EN);
 	const uint32_t crc_ctrl = FLASH_CRCCR_CRC_BURST_3 | FLASH_CRCCR_CLEAN_CRC | FLASH_CRCCR_ALL_BANK;
-	target_mem_write32(target, reg_base + FLASH_CRCCR, crc_ctrl);
-	target_mem_write32(target, reg_base + FLASH_CRCCR, crc_ctrl | FLASH_CRCCR_START_CRC);
+	target_mem32_write32(target, reg_base + FLASH_CRCCR, crc_ctrl);
+	target_mem32_write32(target, reg_base + FLASH_CRCCR, crc_ctrl | FLASH_CRCCR_START_CRC);
 	uint32_t status = FLASH_SR_CRC_BUSY;
 #if ENABLE_DEBUG == 1
 	const uint8_t bank = reg_base == FPEC1_BASE ? 1 : 2;
